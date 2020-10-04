@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MandatoryDetailsActivity"
+    android:orientation="vertical"
+    >
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/upperLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"></androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:id="@+id/nameLayout"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/nameTextView"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:text="Name"
+                android:paddingTop="20dp"
+                android:textAlignment="center"
+                android:textSize="16sp" />
+
+            <EditText
+                android:id="@+id/nameEditText"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="3"
+                android:ems="10"
+                android:inputType="textPersonName"
+                android:hint="Your Name"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/truckLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="6"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <RadioGroup
+            android:id="@+id/truckTypeRadioGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" >
+
+            <RadioButton
+                android:id="@+id/truck1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="3 Wheeler Tempo" />
+
+            <RadioButton
+                android:id="@+id/truck3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Tata Ace / Chota Hathi" />
+
+            <RadioButton
+                android:id="@+id/truck4"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Bolero Pickup 5 seater" />
+
+            <RadioButton
+                android:id="@+id/truck5"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Bolero Pickup 3 seater" />
+
+            <RadioButton
+                android:id="@+id/truck6"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Tata Tempo" />
+
+            <RadioButton
+                android:id="@+id/truck7"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="Truck" />
+        </RadioGroup>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/locationLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/locationTextView"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:text="Locality"
+            android:paddingTop="20dp"
+            android:textAlignment="center"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/locationEditText"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:hint="Your Locality"
+            android:textSize="16sp" />
+    </LinearLayout>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:id="@+id/registerProfile"
+
+        >
+
+        <Button
+            android:id="@+id/registerInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:text="Save Info"
+            ></Button>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

@@ -12,20 +12,20 @@
         android:id="@+id/startLayout1"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="2"
         android:orientation="vertical"></LinearLayout>
     <LinearLayout
-        android:id="@+id/startLayout4"
+        android:id="@+id/startLayout2"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="2"
         android:orientation="vertical"></LinearLayout>
 
     <LinearLayout
         android:id="@+id/verificationLayout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2"
+        android:layout_weight="3"
         android:orientation="vertical">
 
         <EditText
@@ -58,5 +58,12 @@
             android:layout_height="wrap_content"
             android:text="SIGN IN" />
     </LinearLayout>
+    <LinearLayout
+        android:id="@+id/startLayout4"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"></LinearLayout>
+
 
 </LinearLayout>

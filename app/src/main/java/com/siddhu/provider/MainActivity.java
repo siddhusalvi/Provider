@@ -6,7 +6,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -31,6 +33,13 @@ import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
+    SharedPreferences sharedpreferences;
+
+    SharedPreferences.Editor editor;
+
+    public static final String providerPrefrences = "ProviderApp";
+    public static final String DRIVER_NAME = "DRIVER_NAME";
+
     private static final String TAG = "TaG";
     private EditText mPhoneNumber,mOTP;
     private Button mOTPRequest,mSignIn;
@@ -50,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
+        sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
+
         if (ContextCompat.checkSelfPermission(MainActivity.this,
                 Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
@@ -60,11 +72,13 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this,
                         new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             }
-
         }
 
         if(FirebaseAuth.getInstance().getCurrentUser() == null){
             startActivity(new Intent(this,LoginActivity.class));
+            finish();
+        }else if(!sharedpreferences.contains(DRIVER_NAME)){
+            startActivity(new Intent(MainActivity.this,MandatoryDetailsActivity.class));
             finish();
         }else {
             startActivity(new Intent(this,WorkActivity.class));

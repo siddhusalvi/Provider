@@ -2,7 +2,9 @@ package com.siddhu.provider;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Looper;
@@ -24,18 +26,31 @@ import com.google.firebase.auth.FirebaseAuth;
 
 public class WorkActivity extends AppCompatActivity {
 
+
+    SharedPreferences sharedpreferences;
+
+    SharedPreferences.Editor editor;
+
+    public static final String providerPrefrences = "ProviderApp";
+
+
     private FusedLocationProviderClient mFusdedLocationClient;
 
     private  LocationRequest mLocationRequest;
 
     private Switch mService;
     private Button mLogout;
+    private Button mbutton;
 
     private Location mLastLocation;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_work);
+
+        sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
+
+
         mFusdedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         mService = findViewById(R.id.serviceSwitch);
@@ -45,6 +60,7 @@ public class WorkActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 stopDriverServicer();
+                clearLocalData();
                 FirebaseAuth.getInstance().signOut();
                 startActivity(new Intent(WorkActivity.this,MainActivity.class));
                 finish();
@@ -69,6 +85,17 @@ public class WorkActivity extends AppCompatActivity {
                 }
             }
         });
+
+
+        mbutton = findViewById(R.id.button);
+
+        mbutton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(WorkActivity.this,MandatoryDetailsActivity.class));
+            }
+        });
+
 
 
     }
@@ -107,6 +134,12 @@ public class WorkActivity extends AppCompatActivity {
         if(mFusdedLocationClient != null){
             mFusdedLocationClient.removeLocationUpdates(mLocationCallback);
         }
+    }
+
+    private void clearLocalData(){
+        editor = sharedpreferences.edit();
+        editor.clear();
+        editor.commit();
     }
 
 
