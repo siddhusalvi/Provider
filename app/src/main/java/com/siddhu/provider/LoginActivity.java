@@ -3,11 +3,13 @@ package com.siddhu.provider;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -33,6 +35,8 @@ public class LoginActivity extends AppCompatActivity {
     private String countryCode = "+91";
     private String otpCodeSent;
     private String enteredCode;
+
+    private boolean codeIsSent = false;
 
     private int timeout = 120;
 
@@ -76,6 +80,7 @@ public class LoginActivity extends AppCompatActivity {
                     mCallbacks);        // OnVerificationStateChangedCallbacks
             String msg = "OTP is sent to "+phoneNumber;
             showMsg(msg);
+            codeIsSent = true;
         }else{
             return;
         }
@@ -102,7 +107,7 @@ public class LoginActivity extends AppCompatActivity {
     };
 
     private void verifySignInCode(){
-        if(phoneNumberIsValid() && OTPIsValid()){
+        if(phoneNumberIsValid() && OTPIsValid() && codeIsRequested()){
             PhoneAuthCredential credential = PhoneAuthProvider.getCredential(otpCodeSent, enteredCode );
             signInWithPhoneAuthCredential(credential);
         }
@@ -117,7 +122,8 @@ public class LoginActivity extends AppCompatActivity {
                             // Sign in success, update UI with the signed-in user's information
                             String msg = "Sign in Successful :)";
                             showMsg(msg);
-
+                            startActivity(new Intent(LoginActivity.this,WorkActivity.class));
+                            finish();
                         } else {
                             // Sign in failed, display a message and update the UI
                             Log.w(TAG, "signInWithCredential:failure", task.getException());
@@ -153,8 +159,20 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    //Fuction to check code is sent
+    private boolean codeIsRequested(){
+        if(codeIsSent){
+            return true;
+        }else {
+            String msg = "Please Request Code";
+            showMsg(msg);
+            return false;
+        }
+    }
+
     private void showMsg(String msg){
-        Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
+        //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
 }
