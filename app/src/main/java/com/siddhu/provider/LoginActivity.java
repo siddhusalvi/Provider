@@ -3,7 +3,9 @@ package com.siddhu.provider;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -25,6 +27,11 @@ import java.util.concurrent.TimeUnit;
 
 public class LoginActivity extends AppCompatActivity {
 
+    public static final String  PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String providerPrefrences = "ProviderApp";
+    SharedPreferences sharedpreferences;
+    SharedPreferences.Editor editor;
+
     private static final String TAG = "TaG";
     private EditText mPhoneNumber,mOTP;
     private Button mOTPRequest,mSignIn;
@@ -44,6 +51,11 @@ public class LoginActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+
+        sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
+        editor = sharedpreferences.edit();
+
         mAuth = FirebaseAuth.getInstance();
 
         mPhoneNumber = findViewById(R.id.phoneEditText);
@@ -120,9 +132,11 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
+                            editor.putString(PHONE_NUMBER,phoneNumber);
+                            editor.commit();
                             String msg = "Sign in Successful :)";
                             showMsg(msg);
-                            startActivity(new Intent(LoginActivity.this,WorkActivity.class));
+                            startActivity(new Intent(LoginActivity.this,MandatoryDetailsActivity.class).putExtra("phone",phoneNumber));
                             finish();
                         } else {
                             // Sign in failed, display a message and update the UI

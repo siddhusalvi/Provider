@@ -1,5 +1,7 @@
 package com.siddhu.provider;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
@@ -13,6 +15,11 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,9 +29,15 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
     public static final String  DRIVER_LOCALITY = "DRIVER_LOCALITY";
     public static final String  TRUCK_TYPE = "TRUCK_TYPE";
 
+    public static final String  PHONE_NUMBER = "PHONE_NUMBER";
     SharedPreferences sharedpreferences;
-
     SharedPreferences.Editor editor;
+
+    private DatabaseReference mDriverProfileDatabase;
+
+    private FirebaseAuth mAuth;
+
+
 
     private RadioGroup mTruckGroup;
 
@@ -34,8 +47,10 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
     private TextView mLocality;
 
 
+    private String userID;
     private String driverName;
-    private String driverLocality = "";
+    private String driverLocality;
+    private String phoneNumber;
 
 
     private int truckType = 0;
@@ -47,8 +62,13 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_mandatory_details);
 
-         trucksId = new HashMap<String, Integer>();
-         addTruckId();
+        phoneNumber = getIntent().getStringExtra("phone");
+        trucksId = new HashMap<String, Integer>();
+        addTruckId();
+
+        mAuth = FirebaseAuth.getInstance();
+        userID = mAuth.getCurrentUser().getUid();
+
 
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
         editor = sharedpreferences.edit();
@@ -72,14 +92,9 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
         mRegisterInfo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(allInformationIsFilled()){
-
-                    editor.putString(DRIVER_NAME,driverName);
-                    editor.putString(DRIVER_LOCALITY,driverLocality);
-                    editor.putInt(TRUCK_TYPE,truckType);
-                    editor.commit();
-
+                if(allInformationIsFilled() && isProfileSavedOnFireBase() && isProfileSavedOnLocal()){
                     String msg = "Data Saved";
+                    showMsg(msg);
                     startActivity(new Intent(MandatoryDetailsActivity.this,WorkActivity.class));
                     finish();
                 }
@@ -87,6 +102,8 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
         });
 
     }
+
+
     private boolean allInformationIsFilled(){
         if(driverNameIsFilled() && truckTypeIsFilled() && driverLocalityIsFilled()){
             return true;
@@ -114,6 +131,7 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
             return false;
         }
     }
+    //checking locality is filled
     private boolean driverLocalityIsFilled(){
         driverLocality = mLocality.getText().toString();
         if(mLocality.getText()!=null && driverLocality.trim().length()!=0){
@@ -123,6 +141,27 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
             showMsg(msg);
             return false;
         }
+    }
+    private boolean isProfileSavedOnFireBase(){
+        mDriverProfileDatabase = FirebaseDatabase.getInstance().getReference().child("Drivers").child(userID).child("Profile");
+        Map driverInfo = new HashMap();
+
+        String phoneNumber = sharedpreferences.getString(PHONE_NUMBER,"");
+        driverInfo.put(PHONE_NUMBER,phoneNumber);
+        driverInfo.put(DRIVER_NAME,driverName);
+        driverInfo.put(DRIVER_LOCALITY,driverLocality);
+
+        driverInfo.put(TRUCK_TYPE,String.valueOf(truckType));
+        mDriverProfileDatabase.setValue(driverInfo);
+        return true;
+    }
+    private boolean isProfileSavedOnLocal(){
+        editor.putString(PHONE_NUMBER,phoneNumber);
+        editor.putString(DRIVER_NAME,driverName);
+        editor.putString(DRIVER_LOCALITY,driverLocality);
+        editor.putInt(TRUCK_TYPE,truckType);
+        editor.commit();
+        return true;
     }
 
     private void addTruckId(){
