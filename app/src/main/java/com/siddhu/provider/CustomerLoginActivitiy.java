@@ -25,18 +25,20 @@ import com.google.firebase.auth.PhoneAuthProvider;
 
 import java.util.concurrent.TimeUnit;
 
-public class LoginActivity extends AppCompatActivity {
+public class CustomerLoginActivitiy extends AppCompatActivity {
 
-    public static final String  PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String CLIENT_NAME = "CLIENT_NAME";
+    public static final String  CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
     public static final String providerPrefrences = "ProviderApp";
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
 
     private static final String TAG = "TaG";
-    private EditText mPhoneNumber,mOTP;
+    private EditText mPhoneNumber,mOTP,mName;
     private Button mOTPRequest,mSignIn;
 
     private FirebaseAuth mAuth;
+
 
     private String phoneNumber;
     private String countryCode = "+91";
@@ -50,16 +52,24 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
-
+        setContentView(R.layout.activity_customer_login);
 
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+
+        } else {
+            startActivity(new Intent(this, OrderActivity.class));
+            finish();
+        }
+
         editor = sharedpreferences.edit();
 
         mAuth = FirebaseAuth.getInstance();
 
         mPhoneNumber = findViewById(R.id.phoneEditText);
         mOTP = findViewById(R.id.otpEditText);
+        mName = findViewById(R.id.nameEditText);
 
         mOTPRequest = findViewById(R.id.getOtpButton);
         mSignIn = findViewById(R.id.signInButton);
@@ -132,11 +142,11 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
-                            editor.putString(PHONE_NUMBER,phoneNumber);
+                            editor.putString(CLIENT_PHONE_NUMBER,phoneNumber);
                             editor.commit();
                             String msg = "Sign in Successful :)";
                             showMsg(msg);
-                            startActivity(new Intent(LoginActivity.this,MandatoryDetailsActivity.class).putExtra("phone",phoneNumber));
+                            startActivity(new Intent(CustomerLoginActivitiy.this,OrderActivity.class).putExtra("phone",phoneNumber));
                             finish();
                         } else {
                             // Sign in failed, display a message and update the UI
@@ -147,6 +157,14 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    private boolean nameIsFilled(){
+        if(mName.getText().toString() == null || mName.getText().toString().trim().length() ==0){
+            String msg = "Please enter your name ?";
+            showMsg(msg);
+            return false;
+        }
+        return true;
+    }
 
     //Function to check phone number is valid
     private boolean phoneNumberIsValid(){

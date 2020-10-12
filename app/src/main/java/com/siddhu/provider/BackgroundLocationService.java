@@ -6,6 +6,8 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -14,16 +16,21 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class BackgroundLocationService extends Service {
 
     private FusedLocationProviderClient mLocationClient;
     private LocationCallback mLocationCallback;
-
+    private ValueEventListener customerListener;
     private String userId;
+    private GeoFire geoFireAvailable;
+    private DatabaseReference customerRef;
+
 
     public BackgroundLocationService() {
 
@@ -36,6 +43,20 @@ public class BackgroundLocationService extends Service {
         mLocationClient = LocationServices.getFusedLocationProviderClient(getApplicationContext());
         userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
+        customerListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists()){
+                    showMsg("Ride found for "+snapshot.getValue().toString());
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                  showMsg(error.getMessage());
+            }
+        };
+
     }
 
     @Override
@@ -45,7 +66,7 @@ public class BackgroundLocationService extends Service {
 
 
         getLocationUpdates();
-
+        waitForCustomer();
         return START_STICKY;
 
 
@@ -77,7 +98,7 @@ public class BackgroundLocationService extends Service {
                     return;
                 } else {
                     DatabaseReference refAvailable = FirebaseDatabase.getInstance().getReference("driversAvailable");
-                    GeoFire geoFireAvailable = new GeoFire(refAvailable);
+                    geoFireAvailable = new GeoFire(refAvailable);
                     Double lat, lng;
                     lat = locationResult.getLastLocation().getLatitude();
                     lng = locationResult.getLastLocation().getLongitude();
@@ -101,9 +122,33 @@ public class BackgroundLocationService extends Service {
 
     }
 
+    private void waitForCustomer(){
+        customerRef = FirebaseDatabase.getInstance().getReference().child("Drivers").child(userId).child("CustomerRequest").child("ride");
+        customerRef.addValueEventListener(customerListener);
+
+    }
+
+    private void removeDateBaseRef(){
+
+    }
+
 
     @Override
     public void onDestroy() {
+
+        if(geoFireAvailable != null && userId!=null ){
+        geoFireAvailable.removeLocation(userId, new GeoFire.CompletionListener() {
+            @Override
+            public void onComplete(String key, DatabaseError error) {
+                if (error != null) {
+                    showMsg(error.toString());
+                } else {
+                    System.out.println("Location saved on server successfully!");
+                }
+            }
+        });}
+
+        customerRef.removeEventListener(customerListener);
         mLocationClient.removeLocationUpdates(mLocationCallback);
         String msg = "Provider Location Service Distroyed";
         showMsg(msg);

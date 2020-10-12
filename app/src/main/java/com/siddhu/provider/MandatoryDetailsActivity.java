@@ -146,7 +146,7 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
         mDriverProfileDatabase = FirebaseDatabase.getInstance().getReference().child("Drivers").child(userID).child("Profile");
         Map driverInfo = new HashMap();
 
-        String phoneNumber = sharedpreferences.getString(PHONE_NUMBER,"");
+        String phoneNumber = sharedpreferences.getString("DRIVER_PHONE_NUMBER","");
         driverInfo.put(PHONE_NUMBER,phoneNumber);
         driverInfo.put(DRIVER_NAME,driverName);
         driverInfo.put(DRIVER_LOCALITY,driverLocality);

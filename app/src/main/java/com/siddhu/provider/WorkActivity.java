@@ -209,7 +209,14 @@ public class WorkActivity extends AppCompatActivity {
 
     private void clearLocalData(){
         editor = sharedpreferences.edit();
-        editor.clear();
+
+        String phoneNumber = sharedpreferences.getString("DRIVER_PHONE_NUMBER","");
+
+        editor.remove("DRIVER_PHONE_NUMBER");
+        editor.remove("DRIVER_NAME");
+        editor.remove("DRIVER_LOCALITY");
+        editor.remove("TRUCK_TYPE");
+
         editor.commit();
     }
 

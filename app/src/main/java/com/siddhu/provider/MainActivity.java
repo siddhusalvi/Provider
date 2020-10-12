@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -21,21 +22,8 @@ import com.google.firebase.auth.FirebaseAuth;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String providerPrefrences = "ProviderApp";
-    public static final String DRIVER_NAME = "DRIVER_NAME";
-    private static final String TAG = "TaG";
-    SharedPreferences sharedpreferences;
-    SharedPreferences.Editor editor;
-    boolean hasForegroundLocationPermission;
-    boolean hasBackgroundLocationPermission;
-    private EditText mPhoneNumber, mOTP;
-    private Button mOTPRequest, mSignIn;
-    private FirebaseAuth mAuth;
-    private String phoneNumber;
-    private String countryCode = "+91";
-    private String otpCodeSent;
-    private String enteredCode;
-    private int timeout = 120;
+    private Button mDriver, mCustomer;
+
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
@@ -43,24 +31,53 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
 
-        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        } else if (!sharedpreferences.contains(DRIVER_NAME)) {
-            startActivity(new Intent(MainActivity.this, MandatoryDetailsActivity.class));
-            finish();
-        } else {
-            startActivity(new Intent(this, WorkActivity.class));
-            finish();
+        mDriver = findViewById(R.id.driver);
+        mCustomer = findViewById(R.id.customer);
+
+
+        if (ContextCompat.checkSelfPermission(MainActivity.this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                    Manifest.permission.ACCESS_FINE_LOCATION)) {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            } else {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            }
+
         }
+        mDriver.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, DriverLoginActivity.class);
+                Toast.makeText(getApplicationContext(), "Starting driver", Toast.LENGTH_SHORT).show();
+                startActivity(intent);
+//                finish();
+//                return;
+            }
+        });
+
+        mCustomer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, CustomerLoginActivitiy.class);
+                Toast.makeText(getApplicationContext(), "Starting Customer", Toast.LENGTH_SHORT).show();
+                startActivity(intent);
+//                finish();
+//                return;
+
+            }
+        });
     }
 
-    private void showMsg(String msg){
-        //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
-        Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
+
+/*
+
+
     }
+ */
 
 
 }
