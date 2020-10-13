@@ -8,10 +8,9 @@ import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
-import android.location.LocationManager;
+import android.net.sip.SipSession;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
@@ -25,25 +24,20 @@ import android.widget.Toast;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.firebase.geofire.GeoQuery;
-import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.SettingsClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.xml.transform.Source;
 
 import static com.google.android.gms.location.LocationServices.getFusedLocationProviderClient;
 
@@ -52,8 +46,13 @@ public class OrderActivity extends AppCompatActivity {
     public static final String CLIENT_NAME = "CLIENT_NAME";
     public static final String  CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
     public static final String providerPrefrences = "ProviderApp";
+
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
+
+    DatabaseReference clientDataBaseRef;
+    GeoFire clientRequestGeoFire;
+    ValueEventListener clientRequestListener;
 
     private DatePickerDialog datePicker;
     private TimePickerDialog timePicker;
@@ -76,6 +75,7 @@ public class OrderActivity extends AppCompatActivity {
     private String date;
     private String time;
     private String phoneNumber;
+    private String currentUserId;
 
     private int truckType;
 
@@ -101,6 +101,7 @@ public class OrderActivity extends AppCompatActivity {
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
         phoneNumber = sharedpreferences.getString(CLIENT_PHONE_NUMBER,"");
         name = sharedpreferences.getString(CLIENT_NAME,"");
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         locationRequest = LocationRequest.create();
@@ -134,6 +135,7 @@ public class OrderActivity extends AppCompatActivity {
                         if(location != null){
                             mlocation = location;
                             showMsg(location.toString());
+                            driverLocationQuery(mlocation);
                         }
                     }
                 }
@@ -201,72 +203,27 @@ public class OrderActivity extends AppCompatActivity {
                         }
                     }
                 });
-
-
     }
 
     public void startLocationUpdates(){
         mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
     }
 
-    public void onLocationChanged(Location location) {
-        showMsg(location.toString());
+    private void driverLocationQuery(Location currentLocation){
+        clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
+        clientRequestGeoFire = new GeoFire(clientDataBaseRef);
+        clientRequestGeoFire.setLocation(currentUserId,new GeoLocation(currentLocation.getLatitude(),currentLocation.getLongitude()), new GeoFire.CompletionListener() {
+            @Override
+            public void onComplete(String key, DatabaseError error) {
+                if (error != null) {
+                    showMsg(error.toString());
+                } else {
+                    showMsg("Location saved on server successfully!");
+                }
+            }
+        });
+        showMsg("Firebase service is running");
     }
-//    private void driverLocationQuery(){
-//        DatabaseReference driverLocation = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
-//        GeoFire geoFire = new GeoFire(driverLocation);
-//        geoQuery = geoFire.queryAtLocation(new GeoLocation(pickupLocation.latitude, pickupLocation.longitude), radius);
-//
-//        geoQuery.removeAllListeners();
-//
-//        geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
-//            @Override
-//            public void onKeyEntered(String key, GeoLocation location) {
-//                if (!driverFound && requestBol) {
-//                    driverFound = true;
-//                    driverFoundID = key;
-//
-//                    DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference().child("Users").child("Drivers").child(driverFoundID).child("ActiveCustomer");
-//                    String customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-//                    HashMap map = new HashMap();
-//                    map.put("customerRideId", customerId);
-//                    map.put("destination", destination);
-//                    driverRef.updateChildren(map);
-//                    mRequest.setText("Looking for Driver Location....");
-//                    getDriverLocation();
-//                    getDriverInfo();
-//
-//                }
-//            }
-//
-//            @Override
-//            public void onKeyExited(String key) {
-//
-//            }
-//
-//            @Override
-//            public void onKeyMoved(String key, GeoLocation location) {
-//
-//            }
-//
-//            @Override
-//            public void onGeoQueryReady() {
-//                if (!driverFound) {
-//                    radius++;
-//                    getClosestDriver();
-//                }
-//            }
-//
-//            @Override
-//            public void onGeoQueryError(DatabaseError error) {
-//                message(error.getMessage(),0);
-//            }
-//        });
-//    }
-
-
-
-
 
     //Function to get Truck request data
     private boolean getAllRequestInfo(){
@@ -311,7 +268,6 @@ public class OrderActivity extends AppCompatActivity {
         return true;
     }
 
-
     private void addTruckId(){
         trucksId.put("3 Wheeler Tempo", new Integer(1));
         trucksId.put("Tata Ace / Chota Hathi", new Integer(2));
@@ -320,8 +276,6 @@ public class OrderActivity extends AppCompatActivity {
         trucksId.put("Tata Tempo", new Integer(5));
         trucksId.put("Truck", new Integer(6));
     }
-
-
 
     private void showMsg(String msg){
         //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
@@ -335,6 +289,14 @@ public class OrderActivity extends AppCompatActivity {
             showMsg(msg);
             mFusedLocationClient.removeLocationUpdates(locationCallback);
         }
+        clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
+        clientRequestGeoFire = new GeoFire(clientDataBaseRef);
+        clientRequestGeoFire.removeLocation(currentUserId, new GeoFire.CompletionListener() {
+            @Override
+            public void onComplete(String key, DatabaseError error) {
+                showMsg(error.getMessage());
+            }
+        });
         super.onDestroy();
     }
 }
