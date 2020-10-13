@@ -5,9 +5,15 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.view.View;
+import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.RadioButton;
@@ -16,15 +22,42 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQuery;
+import com.firebase.geofire.GeoQueryEventListener;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.SettingsClient;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.xml.transform.Source;
 
+import static com.google.android.gms.location.LocationServices.getFusedLocationProviderClient;
+
 public class OrderActivity extends AppCompatActivity {
+
+    public static final String CLIENT_NAME = "CLIENT_NAME";
+    public static final String  CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String providerPrefrences = "ProviderApp";
+    SharedPreferences sharedpreferences;
+    SharedPreferences.Editor editor;
+
     private DatePickerDialog datePicker;
     private TimePickerDialog timePicker;
+
     private TextView dateTextView;
     private TextView timeTextView;
 
@@ -34,6 +67,9 @@ public class OrderActivity extends AppCompatActivity {
 
     private RadioGroup truckRadioGroup;
 
+    private Button requestTruckButton;
+
+    private String name;
     private String source;
     private String destination;
     private String note;
@@ -49,10 +85,27 @@ public class OrderActivity extends AppCompatActivity {
 
     private Map trucksId;
 
+    private FusedLocationProviderClient mFusedLocationClient;
+    private LocationRequest locationRequest;
+    private LocationCallback locationCallback;
+    private Location mlocation;
+    private long UPDATE_INTERVAL = 10 * 1000;  /* 10 secs */
+    private long FASTEST_INTERVAL = 4000; /* 4 sec */
+    private GeoQuery geoQuery;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_order);
+
+        sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
+        phoneNumber = sharedpreferences.getString(CLIENT_PHONE_NUMBER,"");
+        name = sharedpreferences.getString(CLIENT_NAME,"");
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(UPDATE_INTERVAL);
 
 
         trucksId = new HashMap<String, Integer>();
@@ -68,6 +121,24 @@ public class OrderActivity extends AppCompatActivity {
 
         noteEditText = findViewById(R.id.noteEditText);
 
+        requestTruckButton = findViewById(R.id.requestTruckButton);
+
+
+        locationCallback = new LocationCallback(){
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if(locationResult == null){
+
+                }else{
+                    for (Location location : locationResult.getLocations()){
+                        if(location != null){
+                            mlocation = location;
+                            showMsg(location.toString());
+                        }
+                    }
+                }
+            }
+        };
 
         dateTextView.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.N)
@@ -102,7 +173,7 @@ public class OrderActivity extends AppCompatActivity {
                     public void onTimeSet(TimePicker timePicker, int selectedHour, int selectedMinute) {
                         timeTextView.setText(selectedHour + ":" + selectedMinute);
                         time = selectedHour +" "+ selectedHour;
-                        timeFlag = false;
+                        timeFlag = true;
                     }
                 }, hour, minute, false);//Yes 24 hour time
                 mTimePicker.setTitle("Select Time");
@@ -120,9 +191,85 @@ public class OrderActivity extends AppCompatActivity {
             }
         });
 
+                requestTruckButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if(getAllRequestInfo()){
+                            String msg = name + " " + phoneNumber + source + " " + destination + " " + truckType + " " + date + " " +time + note + " " + "will be sent to the drivier";
+                            showMsg(msg);
+                            startLocationUpdates();
+                        }
+                    }
+                });
+
+
     }
 
-    private boolean GetAllRequestInfo(){
+    public void startLocationUpdates(){
+        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+    }
+
+    public void onLocationChanged(Location location) {
+        showMsg(location.toString());
+    }
+//    private void driverLocationQuery(){
+//        DatabaseReference driverLocation = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
+//        GeoFire geoFire = new GeoFire(driverLocation);
+//        geoQuery = geoFire.queryAtLocation(new GeoLocation(pickupLocation.latitude, pickupLocation.longitude), radius);
+//
+//        geoQuery.removeAllListeners();
+//
+//        geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+//            @Override
+//            public void onKeyEntered(String key, GeoLocation location) {
+//                if (!driverFound && requestBol) {
+//                    driverFound = true;
+//                    driverFoundID = key;
+//
+//                    DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference().child("Users").child("Drivers").child(driverFoundID).child("ActiveCustomer");
+//                    String customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+//                    HashMap map = new HashMap();
+//                    map.put("customerRideId", customerId);
+//                    map.put("destination", destination);
+//                    driverRef.updateChildren(map);
+//                    mRequest.setText("Looking for Driver Location....");
+//                    getDriverLocation();
+//                    getDriverInfo();
+//
+//                }
+//            }
+//
+//            @Override
+//            public void onKeyExited(String key) {
+//
+//            }
+//
+//            @Override
+//            public void onKeyMoved(String key, GeoLocation location) {
+//
+//            }
+//
+//            @Override
+//            public void onGeoQueryReady() {
+//                if (!driverFound) {
+//                    radius++;
+//                    getClosestDriver();
+//                }
+//            }
+//
+//            @Override
+//            public void onGeoQueryError(DatabaseError error) {
+//                message(error.getMessage(),0);
+//            }
+//        });
+//    }
+
+
+
+
+
+    //Function to get Truck request data
+    private boolean getAllRequestInfo(){
         if(sourecEditText.getText() == null ||sourecEditText.getText().toString().trim().length() ==0){
             String msg = "Enter Source";
             showMsg(msg);
@@ -137,12 +284,11 @@ public class OrderActivity extends AppCompatActivity {
         }
         destination = destinationEditText.getText().toString();
 
-        if(noteEditText.getText() == null || noteEditText.getText().toString().trim().length() ==0){
-            String msg = "Enter note";
+        if(!truckFlag){
+            String msg = "select truck type";
             showMsg(msg);
             return false;
         }
-        note = noteEditText.getText().toString();
 
         if(!dateFlag){
             String msg = "Enter date";
@@ -156,7 +302,12 @@ public class OrderActivity extends AppCompatActivity {
             return false;
         }
 
-
+        if(noteEditText.getText() == null || noteEditText.getText().toString().trim().length() ==0){
+            String msg = "Enter note";
+            showMsg(msg);
+            return false;
+        }
+        note = noteEditText.getText().toString();
         return true;
     }
 
@@ -177,4 +328,13 @@ public class OrderActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
+    @Override
+    protected void onDestroy() {
+        if(mFusedLocationClient != null) {
+            String msg = "location service distroyed.";
+            showMsg(msg);
+            mFusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+        super.onDestroy();
+    }
 }

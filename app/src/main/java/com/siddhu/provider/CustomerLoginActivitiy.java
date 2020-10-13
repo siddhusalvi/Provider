@@ -13,6 +13,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
@@ -22,7 +25,11 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.PhoneAuthCredential;
 import com.google.firebase.auth.PhoneAuthProvider;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
+import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 public class CustomerLoginActivitiy extends AppCompatActivity {
@@ -39,7 +46,7 @@ public class CustomerLoginActivitiy extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
 
-
+    private String name;
     private String phoneNumber;
     private String countryCode = "+91";
     private String otpCodeSent;
@@ -55,6 +62,7 @@ public class CustomerLoginActivitiy extends AppCompatActivity {
         setContentView(R.layout.activity_customer_login);
 
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
+        editor = sharedpreferences.edit();
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
 
@@ -63,7 +71,7 @@ public class CustomerLoginActivitiy extends AppCompatActivity {
             finish();
         }
 
-        editor = sharedpreferences.edit();
+
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -129,7 +137,7 @@ public class CustomerLoginActivitiy extends AppCompatActivity {
     };
 
     private void verifySignInCode(){
-        if(phoneNumberIsValid() && OTPIsValid() && codeIsRequested()){
+        if(phoneNumberIsValid() && OTPIsValid() && codeIsRequested() && nameIsFilled()){
             PhoneAuthCredential credential = PhoneAuthProvider.getCredential(otpCodeSent, enteredCode );
             signInWithPhoneAuthCredential(credential);
         }
@@ -143,6 +151,7 @@ public class CustomerLoginActivitiy extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
                             editor.putString(CLIENT_PHONE_NUMBER,phoneNumber);
+                            editor.putString(CLIENT_NAME,name);
                             editor.commit();
                             String msg = "Sign in Successful :)";
                             showMsg(msg);
@@ -163,8 +172,11 @@ public class CustomerLoginActivitiy extends AppCompatActivity {
             showMsg(msg);
             return false;
         }
+        name = mName.getText().toString();
         return true;
     }
+
+
 
     //Function to check phone number is valid
     private boolean phoneNumberIsValid(){
