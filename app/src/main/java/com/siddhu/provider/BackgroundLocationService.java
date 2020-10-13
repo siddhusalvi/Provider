@@ -31,6 +31,8 @@ public class BackgroundLocationService extends Service {
     private GeoFire geoFireAvailable;
     private DatabaseReference customerRef;
 
+    private String AVAILABLE_DRIVERS = "DriversAvailable";
+
 
     public BackgroundLocationService() {
 
@@ -97,7 +99,7 @@ public class BackgroundLocationService extends Service {
                     showMsg(msg);
                     return;
                 } else {
-                    DatabaseReference refAvailable = FirebaseDatabase.getInstance().getReference("driversAvailable");
+                    DatabaseReference refAvailable = FirebaseDatabase.getInstance().getReference(AVAILABLE_DRIVERS);
                     geoFireAvailable = new GeoFire(refAvailable);
                     Double lat, lng;
                     lat = locationResult.getLastLocation().getLatitude();

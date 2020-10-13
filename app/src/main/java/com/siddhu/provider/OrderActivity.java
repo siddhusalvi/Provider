@@ -8,7 +8,6 @@ import android.app.TimePickerDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
-import android.net.sip.SipSession;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -24,7 +23,9 @@ import android.widget.Toast;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.firebase.geofire.GeoQuery;
+import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
@@ -33,7 +34,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 import java.util.Calendar;
 import java.util.HashMap;
@@ -46,13 +46,15 @@ public class OrderActivity extends AppCompatActivity {
     public static final String CLIENT_NAME = "CLIENT_NAME";
     public static final String  CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
     public static final String providerPrefrences = "ProviderApp";
-
+    public static final String AVAILABLE_DRIVERS = "DriversAvailable";
+    public  static final Double RADIUS = 10d;
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
 
     DatabaseReference clientDataBaseRef;
+    DatabaseReference availableDriverDataBaseRef;
     GeoFire clientRequestGeoFire;
-    ValueEventListener clientRequestListener;
+    GeoFire availableDriverRequestGeoFire;
 
     private DatePickerDialog datePicker;
     private TimePickerDialog timePicker;
@@ -76,22 +78,24 @@ public class OrderActivity extends AppCompatActivity {
     private String time;
     private String phoneNumber;
     private String currentUserId;
+    private String resultDriverId;
 
     private int truckType;
 
     private boolean dateFlag = false;
     private boolean timeFlag = false;
     private boolean truckFlag = false;
+    private boolean clientRequestDatabaseFlag = false;
 
     private Map trucksId;
 
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
-    private Location mlocation;
+    private Location currentLocation;
     private long UPDATE_INTERVAL = 10 * 1000;  /* 10 secs */
     private long FASTEST_INTERVAL = 4000; /* 4 sec */
-    private GeoQuery geoQuery;
+    private GeoQuery availableDriverGeoQuery;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,12 +137,17 @@ public class OrderActivity extends AppCompatActivity {
                 }else{
                     for (Location location : locationResult.getLocations()){
                         if(location != null){
-                            mlocation = location;
-                            showMsg(location.toString());
-                            driverLocationQuery(mlocation);
+                            currentLocation = location;
+                            showMsg("location updating");
+                            fireClientRequest(currentLocation);
                         }
                     }
                 }
+            }
+
+            @Override
+            public void onLocationAvailability(LocationAvailability locationAvailability) {
+                super.onLocationAvailability(locationAvailability);
             }
         };
 
@@ -200,6 +209,7 @@ public class OrderActivity extends AppCompatActivity {
                             String msg = name + " " + phoneNumber + source + " " + destination + " " + truckType + " " + date + " " +time + note + " " + "will be sent to the drivier";
                             showMsg(msg);
                             startLocationUpdates();
+
                         }
                     }
                 });
@@ -209,20 +219,63 @@ public class OrderActivity extends AppCompatActivity {
         mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
     }
 
-    private void driverLocationQuery(Location currentLocation){
+    private void fireClientRequest(Location currentLocation){
         clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
         clientRequestGeoFire = new GeoFire(clientDataBaseRef);
         clientRequestGeoFire.setLocation(currentUserId,new GeoLocation(currentLocation.getLatitude(),currentLocation.getLongitude()), new GeoFire.CompletionListener() {
             @Override
             public void onComplete(String key, DatabaseError error) {
                 if (error != null) {
+                    clientRequestDatabaseFlag = false;
+                    String msg = "Setting client request flag off \n";
+                    showMsg(msg);
                     showMsg(error.toString());
                 } else {
-                    showMsg("Location saved on server successfully!");
+                    clientRequestDatabaseFlag = true;
+
                 }
             }
         });
         showMsg("Firebase service is running");
+    }
+
+    private void getAvailableDriver(){
+
+        availableDriverDataBaseRef = FirebaseDatabase.getInstance().getReference().child(AVAILABLE_DRIVERS);
+        availableDriverRequestGeoFire = new GeoFire(availableDriverDataBaseRef);
+        availableDriverGeoQuery = availableDriverRequestGeoFire.queryAtLocation(new GeoLocation(currentLocation.getLatitude(),currentLocation.getLongitude()),RADIUS);
+        availableDriverGeoQuery.removeAllListeners();
+
+        availableDriverGeoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+            @Override
+            public void onKeyEntered(String key, GeoLocation location) {
+                showMsg("Driver found"+key);
+            }
+
+            @Override
+            public void onKeyExited(String key) {
+
+            }
+
+            @Override
+            public void onKeyMoved(String key, GeoLocation location) {
+
+            }
+
+            @Override
+            public void onGeoQueryReady() {
+
+            }
+
+            @Override
+            public void onGeoQueryError(DatabaseError error) {
+                showMsg(error.getMessage());
+            }
+        });
+
+
+
+
     }
 
     //Function to get Truck request data
@@ -297,6 +350,9 @@ public class OrderActivity extends AppCompatActivity {
                 showMsg(error.getMessage());
             }
         });
+
+
+
         super.onDestroy();
     }
 }
