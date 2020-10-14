@@ -14,7 +14,7 @@
         android:layout_marginTop="8dp"
         android:text="Enter The Details"
         android:textAlignment="center"
-        android:textSize="24sp"
+        android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"></TextView>
@@ -23,9 +23,10 @@
         android:id="@+id/sourceEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:ems="10"
         android:hint="Source"
+        android:text="goa"
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -36,9 +37,10 @@
         android:id="@+id/destinationEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="4dp"
         android:ems="10"
         android:hint="Destination"
+        android:text="ratnagiri"
         android:textAlignment="center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -48,7 +50,7 @@
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="4dp"
         android:text="Select TruckType"
         android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -59,9 +61,9 @@
         android:id="@+id/truckTypeRadioGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="24dp"
+        android:layout_marginStart="60dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="32dp"
         android:orientation="vertical"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -72,6 +74,7 @@
             android:id="@+id/truck1"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:checked="true"
             android:text="3 Wheeler Tempo" />
 
         <RadioButton
@@ -79,7 +82,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:text="Tata Ace / Chota Hathi"
-            android:textSize="16sp"/>
+            android:textSize="16sp" />
 
         <RadioButton
             android:id="@+id/truck4"
@@ -114,7 +117,7 @@
         android:id="@+id/dateTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="4dp"
         android:hint="Date of the Transport"
         android:textAlignment="center"
         android:textSize="20sp"
@@ -126,7 +129,7 @@
         android:id="@+id/timeTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="4dp"
         android:hint="Time of the Transport"
         android:textAlignment="center"
         android:textSize="20sp"
@@ -139,9 +142,10 @@
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:layout_marginEnd="8dp"
         android:hint="Message to driver"
+        android:text="msg"
         android:textAlignment="center"
         android:textSize="16sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -153,11 +157,21 @@
         android:id="@+id/requestTruckButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:text="Request Truck"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/noteEditText" />
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Logout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/requestTruckButton" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

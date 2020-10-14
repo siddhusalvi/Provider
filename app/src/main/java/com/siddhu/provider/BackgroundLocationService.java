@@ -99,7 +99,7 @@ public class BackgroundLocationService extends Service {
                     showMsg(msg);
                     return;
                 } else {
-                    DatabaseReference refAvailable = FirebaseDatabase.getInstance().getReference(AVAILABLE_DRIVERS);
+                    DatabaseReference refAvailable = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
                     geoFireAvailable = new GeoFire(refAvailable);
                     Double lat, lng;
                     lat = locationResult.getLastLocation().getLatitude();
@@ -111,7 +111,7 @@ public class BackgroundLocationService extends Service {
                                 if (error != null) {
                                     showMsg(error.toString());
                                 } else {
-                                    System.out.println("Location saved on server successfully!");
+//                                    System.out.println("Location saved on server successfully!");
                                 }
                             }
                         });

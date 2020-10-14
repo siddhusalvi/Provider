@@ -1,10 +1,8 @@
 package com.siddhu.provider;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.content.Context;
@@ -12,31 +10,25 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.Switch;
 import android.widget.Toast;
 
-import com.google.android.gms.common.api.GoogleApiClient;
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.material.snackbar.BaseTransientBottomBar;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
-
-import java.util.ArrayList;
-import java.util.List;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class WorkActivity extends AppCompatActivity {
 
@@ -46,19 +38,27 @@ public class WorkActivity extends AppCompatActivity {
     SharedPreferences.Editor editor;
 
     public static final String providerPrefrences = "ProviderApp";
+    public static final String AVAILABLE_DRIVERS = "DriversAvailable";
+    public static final Double RADIUS = 10.0;
+    private long UPDATE_INTERVAL = 10 * 1000;  /* 10 secs */
+    private long FASTEST_INTERVAL = 4000; /* 4 sec */
 
+    private DatabaseReference availableDriverDataBaseRef;
+    private GeoFire clientRequestGeoFire;
+    private GeoFire availableDriverRequestGeoFire;
 
     private FusedLocationProviderClient mFusdedLocationClient;
+    private LocationRequest locationRequest;
+    private LocationCallback locationCallback;
+    private Location currentLocation;
 
-    private  LocationRequest mLocationRequest;
-    private LocationManager locationManager;
 
     Context context;
 
+    private String currentDriverId;
     private Switch mService;
     private Button mLogout;
     private Button mbutton,mbutton2,button3,starService,endService;
-
     private Location mLastLocation;
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
@@ -66,14 +66,17 @@ public class WorkActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_work);
 
+        currentDriverId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
 
         //Checking for the GPS on or not
         mFusdedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(UPDATE_INTERVAL);
 
         checkPermissions();
-
 
         mService = findViewById(R.id.serviceSwitch);
         mLogout = findViewById(R.id.logoutButton);
@@ -88,26 +91,6 @@ public class WorkActivity extends AppCompatActivity {
                 finish();
             }
         });
-
-
-//        mService.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-//            @Override
-//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-//                //Start service
-//                if(isChecked){
-//                    mLocationRequest = new LocationRequest();
-//                    mLocationRequest.setInterval(1000);
-//                    mLocationRequest.setFastestInterval(1000);
-//                    mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-//
-//                    mFusdedLocationClient.requestLocationUpdates(mLocationRequest,mLocationCallback, Looper.myLooper());
-//
-//                //Stopservice
-//                }else{
-//                    stopDriverServicer();
-//                }
-//            }
-//        });
 
 
         mbutton = findViewById(R.id.button);
@@ -151,8 +134,9 @@ public class WorkActivity extends AppCompatActivity {
         starService.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(WorkActivity.this,BackgroundLocationService.class);
-                startService(intent);
+//                Intent intent = new Intent(WorkActivity.this,BackgroundLocationService.class);
+//                startService(intent);
+                startLocationUpdates();
 
             }
         });
@@ -161,50 +145,64 @@ public class WorkActivity extends AppCompatActivity {
         endService.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(WorkActivity.this,BackgroundLocationService.class);
-                stopService(intent);
+//                Intent intent = new Intent(WorkActivity.this,BackgroundLocationService.class);
+//                stopService(intent);
+                stopLocationUpdates();
+
             }
         });
 
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+
+                } else {
+                    for (Location location : locationResult.getLocations()) {
+                        if (location != null) {
+                            currentLocation = location;
+                            showMsg("location updating");
+                            broadCastLocation(currentLocation);
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    public void startLocationUpdates() {
+        mFusdedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+    }
+
+    private void broadCastLocation(Location currentLocation) {
+
+        availableDriverDataBaseRef = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
+        availableDriverRequestGeoFire = new GeoFire(availableDriverDataBaseRef);
+        availableDriverRequestGeoFire.setLocation(currentDriverId, new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), new GeoFire.CompletionListener() {
+                @Override
+                public void onComplete(String key, DatabaseError error) {
+                    if (error != null) {
+//                    clientRequestDatabaseFlag = false;
+                        String msg = "Setting client request flag off \n";
+                        showMsg(msg);
+                        showMsg(error.toString());
+                    } else {
+
+                    }
+                }
+            });
+
+        showMsg("Firebase service is running");
     }
 
 
 
-
-    LocationCallback mLocationCallback = new LocationCallback(){
-
-        @Override
-        public void onLocationResult(LocationResult locationResult) {
-            super.onLocationResult(locationResult);
-
-            for(Location location:locationResult.getLocations()){
-                if (getApplicationContext() != null) {
-
-                    String msg = "Location " + location.toString();
-                    showMsg(msg);
-                }
-            }
-        }
-
-
-        @Override
-        public void onLocationAvailability(LocationAvailability locationAvailability) {
-            super.onLocationAvailability(locationAvailability);
-
-            if(!locationAvailability.isLocationAvailable()){
-                String msg = "No Location Updates";
-                showMsg(msg);
-            }
-        }
-
-
-    };
-
     //Turning of the location service
     private void stopDriverServicer(){
         if(mFusdedLocationClient != null){
-            mFusdedLocationClient.removeLocationUpdates(mLocationCallback);
+            mFusdedLocationClient.removeLocationUpdates(locationCallback);
         }
+        availableDriverRequestGeoFire.removeLocation(currentDriverId);
     }
 
     private void clearLocalData(){
@@ -241,6 +239,20 @@ public class WorkActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 1);
         }
+
+    }
+
+    private void stopLocationUpdates(){
+        if(mFusdedLocationClient != null){
+            mFusdedLocationClient.removeLocationUpdates(locationCallback);
+        }
+        availableDriverRequestGeoFire.removeLocation(currentDriverId ,new GeoFire.CompletionListener() {
+            @Override
+            public void onComplete(String key, DatabaseError error) {
+                if(error != null)
+                    showMsg(error.getMessage());
+            }
+        });
 
     }
 
@@ -285,6 +297,7 @@ public class WorkActivity extends AppCompatActivity {
             }
         }
     }
+
 
     private void showMsg(String msg){
         //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();

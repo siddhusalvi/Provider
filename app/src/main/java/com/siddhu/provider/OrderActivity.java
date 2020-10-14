@@ -1,15 +1,13 @@
 package com.siddhu.provider;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
@@ -19,6 +17,9 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
+
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
@@ -39,15 +40,13 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.android.gms.location.LocationServices.getFusedLocationProviderClient;
-
 public class OrderActivity extends AppCompatActivity {
 
     public static final String CLIENT_NAME = "CLIENT_NAME";
-    public static final String  CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
     public static final String providerPrefrences = "ProviderApp";
     public static final String AVAILABLE_DRIVERS = "DriversAvailable";
-    public  static final Double RADIUS = 10d;
+    public static final Double RADIUS = 10d;
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
 
@@ -69,6 +68,7 @@ public class OrderActivity extends AppCompatActivity {
     private RadioGroup truckRadioGroup;
 
     private Button requestTruckButton;
+    private Button logoutButton;
 
     private String name;
     private String source;
@@ -103,8 +103,8 @@ public class OrderActivity extends AppCompatActivity {
         setContentView(R.layout.activity_order);
 
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
-        phoneNumber = sharedpreferences.getString(CLIENT_PHONE_NUMBER,"");
-        name = sharedpreferences.getString(CLIENT_NAME,"");
+        phoneNumber = sharedpreferences.getString(CLIENT_PHONE_NUMBER, "");
+        name = sharedpreferences.getString(CLIENT_NAME, "");
         currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
@@ -120,36 +120,15 @@ public class OrderActivity extends AppCompatActivity {
         timeTextView = findViewById(R.id.timeTextView);
 
         sourecEditText = findViewById(R.id.sourceEditText);
-        destinationEditText= findViewById(R.id.destinationEditText);
+        destinationEditText = findViewById(R.id.destinationEditText);
 
         truckRadioGroup = findViewById(R.id.truckTypeRadioGroup);
 
         noteEditText = findViewById(R.id.noteEditText);
 
         requestTruckButton = findViewById(R.id.requestTruckButton);
+        logoutButton = findViewById(R.id.logoutButton);
 
-
-        locationCallback = new LocationCallback(){
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                if(locationResult == null){
-
-                }else{
-                    for (Location location : locationResult.getLocations()){
-                        if(location != null){
-                            currentLocation = location;
-                            showMsg("location updating");
-                            fireClientRequest(currentLocation);
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onLocationAvailability(LocationAvailability locationAvailability) {
-                super.onLocationAvailability(locationAvailability);
-            }
-        };
 
         dateTextView.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.N)
@@ -167,7 +146,7 @@ public class OrderActivity extends AppCompatActivity {
                         date = dayOfMonth + " " + (month + 1) + " " + year;
                         dateFlag = true;
                     }
-                },year,month,day);
+                }, year, month, day);
                 datePicker.show();
             }
         });
@@ -183,7 +162,7 @@ public class OrderActivity extends AppCompatActivity {
                     @Override
                     public void onTimeSet(TimePicker timePicker, int selectedHour, int selectedMinute) {
                         timeTextView.setText(selectedHour + ":" + selectedMinute);
-                        time = selectedHour +" "+ selectedHour;
+                        time = selectedHour + " " + selectedHour;
                         timeFlag = true;
                     }
                 }, hour, minute, false);//Yes 24 hour time
@@ -192,64 +171,104 @@ public class OrderActivity extends AppCompatActivity {
             }
         });
 
-                truckRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+        truckRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
                 RadioButton radioButton = group.findViewById(checkedId);
                 truckType = (Integer) trucksId.get(radioButton.getText().toString());
-                truckFlag = true ;
+                truckFlag = true;
 //                Toast.makeText(getApplicationContext(),String.valueOf(truckType),Toast.LENGTH_SHORT).show();
             }
         });
 
-                requestTruckButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if(getAllRequestInfo()){
-                            String msg = name + " " + phoneNumber + source + " " + destination + " " + truckType + " " + date + " " +time + note + " " + "will be sent to the drivier";
-                            showMsg(msg);
-                            startLocationUpdates();
-
-                        }
-                    }
-                });
-    }
-
-    public void startLocationUpdates(){
-        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
-    }
-
-    private void fireClientRequest(Location currentLocation){
-        clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
-        clientRequestGeoFire = new GeoFire(clientDataBaseRef);
-        clientRequestGeoFire.setLocation(currentUserId,new GeoLocation(currentLocation.getLatitude(),currentLocation.getLongitude()), new GeoFire.CompletionListener() {
+        requestTruckButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onComplete(String key, DatabaseError error) {
-                if (error != null) {
-                    clientRequestDatabaseFlag = false;
-                    String msg = "Setting client request flag off \n";
+            public void onClick(View v) {
+                if (getAllRequestInfo()) {
+                    String msg = name + " " + phoneNumber + source + " " + destination + " " + truckType + " " + date + " " + time + note + " " + "will be sent to the drivier";
                     showMsg(msg);
-                    showMsg(error.toString());
-                } else {
-                    clientRequestDatabaseFlag = true;
-
+                    startLocationUpdates();
                 }
             }
         });
+
+        logoutButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FirebaseAuth.getInstance().signOut();
+                performLogout();
+                startActivity(new Intent(OrderActivity.this,MainActivity.class));
+                finish();
+            }
+        });
+
+
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                if (locationResult == null) {
+
+                } else {
+                    for (Location location : locationResult.getLocations()) {
+                        if (location != null) {
+                            currentLocation = location;
+                            showMsg("location updating");
+                            fireClientRequest(currentLocation);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onLocationAvailability(LocationAvailability locationAvailability) {
+                super.onLocationAvailability(locationAvailability);
+            }
+        };
+    }
+
+    public void startLocationUpdates() {
+        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+    }
+
+    private void fireClientRequest(Location currentLocation) {
+
+        if (!clientRequestDatabaseFlag) {
+            clientRequestDatabaseFlag = true;
+            getAvailableDriver();
+//            clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
+//            clientRequestGeoFire = new GeoFire(clientDataBaseRef);
+//            clientRequestGeoFire.setLocation(currentUserId, new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), new GeoFire.CompletionListener() {
+//                @Override
+//                public void onComplete(String key, DatabaseError error) {
+//                    if (error != null) {
+////                    clientRequestDatabaseFlag = false;
+//                        String msg = "Setting client request flag off \n";
+//                        showMsg(msg);
+//                        showMsg(error.toString());
+//                    } else {
+//
+//                    }
+//                }
+//            });
+        }
         showMsg("Firebase service is running");
     }
 
-    private void getAvailableDriver(){
-
-        availableDriverDataBaseRef = FirebaseDatabase.getInstance().getReference().child(AVAILABLE_DRIVERS);
+    private void getAvailableDriver() {
+        showMsg("searching nearest driver");
+        availableDriverDataBaseRef = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
         availableDriverRequestGeoFire = new GeoFire(availableDriverDataBaseRef);
-        availableDriverGeoQuery = availableDriverRequestGeoFire.queryAtLocation(new GeoLocation(currentLocation.getLatitude(),currentLocation.getLongitude()),RADIUS);
+        availableDriverGeoQuery = availableDriverRequestGeoFire.queryAtLocation(new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), RADIUS);
+
         availableDriverGeoQuery.removeAllListeners();
 
         availableDriverGeoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
-            public void onKeyEntered(String key, GeoLocation location) {
-                showMsg("Driver found"+key);
+             public void onKeyEntered(String key, GeoLocation location) {
+
+                String msg = "miracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\n";
+               showMsg(msg);
+               startActivity(new Intent(OrderActivity.this,Main2Activity.class));
             }
 
             @Override
@@ -272,47 +291,43 @@ public class OrderActivity extends AppCompatActivity {
                 showMsg(error.getMessage());
             }
         });
-
-
-
-
     }
 
     //Function to get Truck request data
-    private boolean getAllRequestInfo(){
-        if(sourecEditText.getText() == null ||sourecEditText.getText().toString().trim().length() ==0){
+    private boolean getAllRequestInfo() {
+        if (sourecEditText.getText() == null || sourecEditText.getText().toString().trim().length() == 0) {
             String msg = "Enter Source";
             showMsg(msg);
             return false;
         }
         source = sourecEditText.getText().toString();
 
-        if(destinationEditText.getText() == null || destinationEditText.getText().toString().trim().length() ==0){
+        if (destinationEditText.getText() == null || destinationEditText.getText().toString().trim().length() == 0) {
             String msg = "Enter Destination";
             showMsg(msg);
             return false;
         }
         destination = destinationEditText.getText().toString();
 
-        if(!truckFlag){
+        if (!truckFlag) {
             String msg = "select truck type";
             showMsg(msg);
             return false;
         }
 
-        if(!dateFlag){
+        if (!dateFlag) {
             String msg = "Enter date";
             showMsg(msg);
             return false;
         }
 
-        if(!timeFlag){
+        if (!timeFlag) {
             String msg = "Enter time";
             showMsg(msg);
             return false;
         }
 
-        if(noteEditText.getText() == null || noteEditText.getText().toString().trim().length() ==0){
+        if (noteEditText.getText() == null || noteEditText.getText().toString().trim().length() == 0) {
             String msg = "Enter note";
             showMsg(msg);
             return false;
@@ -321,7 +336,7 @@ public class OrderActivity extends AppCompatActivity {
         return true;
     }
 
-    private void addTruckId(){
+    private void addTruckId() {
         trucksId.put("3 Wheeler Tempo", new Integer(1));
         trucksId.put("Tata Ace / Chota Hathi", new Integer(2));
         trucksId.put("Bolero Pickup 5 seater", new Integer(3));
@@ -330,29 +345,32 @@ public class OrderActivity extends AppCompatActivity {
         trucksId.put("Truck", new Integer(6));
     }
 
-    private void showMsg(String msg){
+    private void showMsg(String msg) {
         //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
-        Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    protected void onDestroy() {
-        if(mFusedLocationClient != null) {
+    private void performLogout(){
+        if (mFusedLocationClient != null) {
             String msg = "location service distroyed.";
             showMsg(msg);
             mFusedLocationClient.removeLocationUpdates(locationCallback);
         }
+        availableDriverGeoQuery.removeAllListeners();
         clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
         clientRequestGeoFire = new GeoFire(clientDataBaseRef);
         clientRequestGeoFire.removeLocation(currentUserId, new GeoFire.CompletionListener() {
             @Override
             public void onComplete(String key, DatabaseError error) {
+                if(error != null)
                 showMsg(error.getMessage());
             }
         });
+    }
 
-
-
+    @Override
+    protected void onDestroy() {
+        performLogout();
         super.onDestroy();
     }
 }
