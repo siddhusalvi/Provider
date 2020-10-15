@@ -64,7 +64,7 @@ public class OrderActivity extends AppCompatActivity {
     private EditText sourecEditText;
     private EditText destinationEditText;
     private EditText noteEditText;
-
+    private static final String TAG = "OrderActivity";
     private RadioGroup truckRadioGroup;
 
     private Button requestTruckButton;
@@ -258,40 +258,44 @@ public class OrderActivity extends AppCompatActivity {
         showMsg("searching nearest driver");
         availableDriverDataBaseRef = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
         availableDriverRequestGeoFire = new GeoFire(availableDriverDataBaseRef);
+
         availableDriverGeoQuery = availableDriverRequestGeoFire.queryAtLocation(new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), RADIUS);
-
-        availableDriverGeoQuery.removeAllListeners();
-
+        Log.d("cc","on getAvailableDriver");
         availableDriverGeoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
-             public void onKeyEntered(String key, GeoLocation location) {
-
+            public void onKeyEntered(String key, GeoLocation location) {
+                Log.d(TAG, "onKeyEntered: ");
                 String msg = "miracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\n";
-               showMsg(msg);
-               startActivity(new Intent(OrderActivity.this,Main2Activity.class));
+                showMsg(msg);
+                noteEditText.setText(key);
             }
 
             @Override
             public void onKeyExited(String key) {
-
+                Log.d(TAG, "onKeyExited: ");
             }
 
             @Override
             public void onKeyMoved(String key, GeoLocation location) {
-
+                Log.d(TAG, "onKeyMoved: ");
             }
 
             @Override
             public void onGeoQueryReady() {
-
+                Log.d(TAG, "onGeoQueryReady: ");
             }
 
             @Override
             public void onGeoQueryError(DatabaseError error) {
                 showMsg(error.getMessage());
+                Log.d(TAG, "onGeoQueryError: ");
             }
         });
     }
+
+//        availableDriverGeoQuery.removeAllListeners();
+
+
 
     //Function to get Truck request data
     private boolean getAllRequestInfo() {
