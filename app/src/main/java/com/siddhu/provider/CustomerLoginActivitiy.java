@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class CustomerLoginActivitiy extends AppCompatActivity {
 
     public static final String CLIENT_NAME = "CLIENT_NAME";
-    public static final String  CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String  CLIENT_PHONE_NUMBER = "ClIENT_PHONE_NUMBER";
     public static final String providerPrefrences = "ProviderApp";
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;

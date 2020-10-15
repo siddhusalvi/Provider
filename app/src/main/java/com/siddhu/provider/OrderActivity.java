@@ -1,4 +1,5 @@
 package com.siddhu.provider;
+
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Context;
@@ -43,29 +44,34 @@ import java.util.Map;
 public class OrderActivity extends AppCompatActivity {
 
     public static final String CLIENT_NAME = "CLIENT_NAME";
-    public static final String CLIENT_PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String CLIENT_PHONE_NUMBER = "ClIENT_PHONE_NUMBER";
+    public static final String CLIENT_SOURCE = "CLIENT_SOURCE";
+    public static final String CLIENT_DESTINATION = "CLIENT_DESTINATION";
+    public static final String CLIENT_TRUCKTYPE = "CLIENT_TRUCKTYPE";
+    public static final String CLIENT_DATE = "CLIENT_DATE";
+    public static final String CLIENT_TIME = "CLIENT_TIME";
+    public static final String CLIENT_NOTE = "CLIENT_NOTE";
+
     public static final String providerPrefrences = "ProviderApp";
     public static final String AVAILABLE_DRIVERS = "DriversAvailable";
     public static final Double RADIUS = 10d;
+    private static final String TAG = "OrderActivity";
+
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
-
     DatabaseReference clientDataBaseRef;
     DatabaseReference availableDriverDataBaseRef;
+    DatabaseReference driverRequestDatabase;
     GeoFire clientRequestGeoFire;
     GeoFire availableDriverRequestGeoFire;
     GeoQueryEventListener availableDriverQueryEventListener;
-
     private DatePickerDialog datePicker;
     private TimePickerDialog timePicker;
-
     private TextView dateTextView;
     private TextView timeTextView;
-
     private EditText sourecEditText;
     private EditText destinationEditText;
     private EditText noteEditText;
-    private static final String TAG = "OrderActivity";
     private RadioGroup truckRadioGroup;
 
     private Button requestTruckButton;
@@ -89,6 +95,7 @@ public class OrderActivity extends AppCompatActivity {
     private boolean clientRequestDatabaseFlag = false;
 
     private Map trucksId;
+    private Map requestMap;
 
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
@@ -198,7 +205,7 @@ public class OrderActivity extends AppCompatActivity {
             public void onClick(View v) {
                 FirebaseAuth.getInstance().signOut();
                 releaseResources();
-                startActivity(new Intent(OrderActivity.this,MainActivity.class));
+                startActivity(new Intent(OrderActivity.this, MainActivity.class));
                 finish();
             }
         });
@@ -215,11 +222,12 @@ public class OrderActivity extends AppCompatActivity {
                             currentLocation = location;
                             showMsg("location updating");
                             fireClientRequest(currentLocation);
-                            if(resultDriverId!=null){
+                            if (resultDriverId != null) {
                                 stopLocationUpdates();
                                 String msg = "Driver Found " + resultDriverId + "sending request to the driver";
                                 showMsg(msg);
                                 noteEditText.setText(msg);
+                                sendRequestToTheDriver(resultDriverId);
                             }
                         }
                     }
@@ -267,7 +275,7 @@ public class OrderActivity extends AppCompatActivity {
         availableDriverRequestGeoFire = new GeoFire(availableDriverDataBaseRef);
 
         availableDriverGeoQuery = availableDriverRequestGeoFire.queryAtLocation(new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), RADIUS);
-        Log.d("cc","on getAvailableDriver");
+        Log.d("cc", "on getAvailableDriver");
         availableDriverGeoQuery.addGeoQueryEventListener(availableDriverQueryEventListener = new GeoQueryEventListener() {
             @Override
             public void onKeyEntered(String key, GeoLocation location) {
@@ -297,6 +305,31 @@ public class OrderActivity extends AppCompatActivity {
         });
     }
 
+    private void sendRequestToTheDriver(String driverId) {
+        driverRequestDatabase = FirebaseDatabase.getInstance().getReference().child("Drivers").child(driverId).child("Request");
+        if(buildRequest()){
+            driverRequestDatabase.setValue(requestMap);
+            String msg = "request sent to the driver";
+            showMsg(msg);
+        }else {
+            String msg = "Problem in building request";
+            showMsg(msg);
+        }
+
+    }
+
+    private boolean buildRequest() {
+        requestMap = new HashMap();
+        requestMap.put(CLIENT_NAME, name);
+        requestMap.put(CLIENT_PHONE_NUMBER, phoneNumber);
+        requestMap.put(CLIENT_SOURCE, source);
+        requestMap.put(CLIENT_DESTINATION, destination);
+        requestMap.put(CLIENT_TRUCKTYPE, truckType);
+        requestMap.put(CLIENT_DATE, date);
+        requestMap.put(CLIENT_TIME, time);
+        requestMap.put(CLIENT_NOTE, note);
+        return true;
+    }
 
     private boolean getAllRequestInfo() {
         if (sourecEditText.getText() == null || sourecEditText.getText().toString().trim().length() == 0) {
@@ -349,17 +382,14 @@ public class OrderActivity extends AppCompatActivity {
         trucksId.put("Truck", new Integer(6));
     }
 
-    private void showMsg(String msg) {
-        //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
-        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
-    }
 
-    private void releaseResources(){
+    private void releaseResources() {
         stopLocationUpdates();
         removeDriverFromAvailableList();
         deleteClientRequest();
     }
-    private void stopLocationUpdates(){
+
+    private void stopLocationUpdates() {
         if (mFusedLocationClient != null) {
             String msg = "location service distroyed.";
             showMsg(msg);
@@ -367,23 +397,30 @@ public class OrderActivity extends AppCompatActivity {
         }
     }
 
-    private void removeDriverFromAvailableList(){
+    private void removeDriverFromAvailableList() {
         availableDriverGeoQuery.removeGeoQueryEventListener(availableDriverQueryEventListener);
     }
-    private void deleteClientRequest(){
+
+    private void deleteClientRequest() {
         clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
         clientRequestGeoFire = new GeoFire(clientDataBaseRef);
         clientRequestGeoFire.removeLocation(currentUserId, new GeoFire.CompletionListener() {
             @Override
             public void onComplete(String key, DatabaseError error) {
-                if(error != null)
+                if (error != null)
                     showMsg(error.getMessage());
             }
         });
     }
 
+    private void showMsg(String msg) {
+        //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+    }
+
     @Override
     protected void onDestroy() {
+
         releaseResources();
         super.onDestroy();
     }

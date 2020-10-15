@@ -1,5 +1,6 @@
 package com.siddhu.provider;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -12,10 +13,11 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.geofire.GeoFire;
@@ -26,32 +28,50 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.EventListener;
+import java.util.Map;
 
 public class WorkActivity extends AppCompatActivity {
 
-
-    SharedPreferences sharedpreferences;
-
-    SharedPreferences.Editor editor;
+    public static final String CLIENT_NAME = "CLIENT_NAME";
+    public static final String CLIENT_PHONE_NUMBER = "ClIENT_PHONE_NUMBER";
+    public static final String CLIENT_SOURCE = "CLIENT_SOURCE";
+    public static final String CLIENT_DESTINATION = "CLIENT_DESTINATION";
+    public static final String CLIENT_TRUCKTYPE = "CLIENT_TRUCKTYPE";
+    public static final String CLIENT_DATE = "CLIENT_DATE";
+    public static final String CLIENT_TIME = "CLIENT_TIME";
+    public static final String CLIENT_NOTE = "CLIENT_NOTE";
 
     public static final String providerPrefrences = "ProviderApp";
     public static final String AVAILABLE_DRIVERS = "DriversAvailable";
     public static final Double RADIUS = 10.0;
     private long UPDATE_INTERVAL = 10 * 1000;  /* 10 secs */
-    private long FASTEST_INTERVAL = 4000; /* 4 sec */
+    private long FASTEST_INTERVAL = 7000; /* 4 sec */
+
+    SharedPreferences sharedpreferences;
+    SharedPreferences.Editor editor;
+    Map map;
+    private boolean availableDriverFlag = false;
+    private TextView noteTextView;
 
     private DatabaseReference availableDriverDataBaseRef;
+
+    private DatabaseReference driverRequestDatabase;
+    private ValueEventListener driverRequestDatabaseEventLister;
+
     private GeoFire clientRequestGeoFire;
     private GeoFire availableDriverRequestGeoFire;
 
-    private FusedLocationProviderClient mFusdedLocationClient;
+    private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
     private Location currentLocation;
-
 
     Context context;
 
@@ -70,13 +90,12 @@ public class WorkActivity extends AppCompatActivity {
 
         sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
 
-        //Checking for the GPS on or not
-        mFusdedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(UPDATE_INTERVAL);
 
-        checkPermissions();
+        noteTextView = findViewById(R.id.noteTextView);
 
         mService = findViewById(R.id.serviceSwitch);
         mLogout = findViewById(R.id.logoutButton);
@@ -84,49 +103,11 @@ public class WorkActivity extends AppCompatActivity {
         mLogout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                stopDriverServicer();
+                releaseResources();
                 clearLocalData();
                 FirebaseAuth.getInstance().signOut();
                 startActivity(new Intent(WorkActivity.this,MainActivity.class));
                 finish();
-            }
-        });
-
-
-        mbutton = findViewById(R.id.button);
-
-        mbutton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(WorkActivity.this,MandatoryDetailsActivity.class));
-            }
-        });
-
-
-
-        mbutton2 = findViewById(R.id.button2);
-
-        mbutton2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                SharedPreferences sharedpreferences;
-                SharedPreferences.Editor editor;
-                String providerPrefrences = "ProviderApp";
-                sharedpreferences = getSharedPreferences(providerPrefrences, Context.MODE_PRIVATE);
-                editor = sharedpreferences.edit();
-                editor.clear();
-                editor.commit();
-            }
-        });
-
-
-        button3 = findViewById(R.id.button3);
-
-        button3.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(WorkActivity.this,Main2Activity.class));
-
             }
         });
 
@@ -147,7 +128,7 @@ public class WorkActivity extends AppCompatActivity {
             public void onClick(View v) {
 //                Intent intent = new Intent(WorkActivity.this,BackgroundLocationService.class);
 //                stopService(intent);
-                stopLocationUpdates();
+                releaseResources();
 
             }
         });
@@ -171,7 +152,7 @@ public class WorkActivity extends AppCompatActivity {
     }
 
     public void startLocationUpdates() {
-        mFusdedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+        mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
     }
 
     private void broadCastLocation(Location currentLocation) {
@@ -182,40 +163,96 @@ public class WorkActivity extends AppCompatActivity {
                 @Override
                 public void onComplete(String key, DatabaseError error) {
                     if (error != null) {
-//                    clientRequestDatabaseFlag = false;
-                        String msg = "Setting client request flag off \n";
+                        String msg = "driversAvailable request problem can't solve it";
                         showMsg(msg);
                         showMsg(error.toString());
                     } else {
-
+                        if(!availableDriverFlag){
+                            availableDriverFlag = true;
+                            waitForOrder();
+                        }
                     }
                 }
             });
-
         showMsg("Firebase service is running");
     }
 
+    private void waitForOrder(){
+        String msg = "Waiting for an order";
+        showMsg(msg);
+        driverRequestDatabase = FirebaseDatabase.getInstance().getReference().child("Drivers").child(currentDriverId).child("Request");
+        driverRequestDatabase.addValueEventListener(driverRequestDatabaseEventLister = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists()){
+                    Map<String,Object> map = (Map <String,Object>) snapshot.getValue();
+                    String msg = "Order found";
+                    showMsg(msg);
+                    displayOrder(map);
 
+                }
+            }
 
-    //Turning of the location service
-    private void stopDriverServicer(){
-        if(mFusdedLocationClient != null){
-            mFusdedLocationClient.removeLocationUpdates(locationCallback);
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                showMsg(error.getMessage());
+            }
+        });
+    }
+
+    private void displayOrder(Map map) {
+        String order = "";
+        order += getvalue(map,CLIENT_NAME);
+        order += getvalue(map,CLIENT_PHONE_NUMBER);
+        order += getvalue(map,CLIENT_SOURCE);
+        order += getvalue(map,CLIENT_DESTINATION);
+        order += getvalue(map,CLIENT_TRUCKTYPE);
+        order += getvalue(map,CLIENT_DATE);
+        order += getvalue(map,CLIENT_TIME);
+        order += getvalue(map,CLIENT_NOTE);
+
+        noteTextView.setText(order);
+    }
+    private String getvalue(Map map,String key){
+        if(map.containsKey(key)){
+            return map.get(key).toString();
         }
-        availableDriverRequestGeoFire.removeLocation(currentDriverId);
+        return key+" is null";
     }
 
     private void clearLocalData(){
         editor = sharedpreferences.edit();
-
         String phoneNumber = sharedpreferences.getString("DRIVER_PHONE_NUMBER","");
-
         editor.remove("DRIVER_PHONE_NUMBER");
         editor.remove("DRIVER_NAME");
         editor.remove("DRIVER_LOCALITY");
         editor.remove("TRUCK_TYPE");
-
         editor.commit();
+    }
+
+    private void releaseResources() {
+        stopLocationUpdates();
+        removeAvailableDriver();
+    }
+
+    private void stopLocationUpdates() {
+        if (mFusedLocationClient != null) {
+            String msg = "location service distroyed.";
+            showMsg(msg);
+            mFusedLocationClient.removeLocationUpdates(locationCallback);
+        }
+    }
+
+    private void removeAvailableDriver(){
+        availableDriverDataBaseRef = FirebaseDatabase.getInstance().getReference().child("driversAvailable");
+        availableDriverRequestGeoFire = new GeoFire(availableDriverDataBaseRef);
+        availableDriverRequestGeoFire.removeLocation(currentDriverId ,new GeoFire.CompletionListener() {
+            @Override
+            public void onComplete(String key, DatabaseError error) {
+                if (error != null)
+                    showMsg(error.getMessage());
+            }
+        });
     }
 
     //Function to check Permission
@@ -239,20 +276,6 @@ public class WorkActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,
                             Manifest.permission.ACCESS_BACKGROUND_LOCATION}, 1);
         }
-
-    }
-
-    private void stopLocationUpdates(){
-        if(mFusdedLocationClient != null){
-            mFusdedLocationClient.removeLocationUpdates(locationCallback);
-        }
-        availableDriverRequestGeoFire.removeLocation(currentDriverId ,new GeoFire.CompletionListener() {
-            @Override
-            public void onComplete(String key, DatabaseError error) {
-                if(error != null)
-                    showMsg(error.getMessage());
-            }
-        });
 
     }
 
@@ -304,4 +327,9 @@ public class WorkActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(),msg,Toast.LENGTH_SHORT).show();
     }
 
+    @Override
+    protected void onDestroy() {
+        releaseResources();
+        super.onDestroy();
+    }
 }

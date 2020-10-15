@@ -39,7 +39,6 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
 
 
-
     private RadioGroup mTruckGroup;
 
     private Button mRegisterInfo;
