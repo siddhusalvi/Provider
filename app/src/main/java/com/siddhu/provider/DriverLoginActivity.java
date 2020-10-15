@@ -29,7 +29,7 @@ public class DriverLoginActivity extends AppCompatActivity {
 
 
     public static final String DRIVER_NAME = "DRIVER_NAME";
-    public static final String  DRIVER_PHONE_NUMBER = "PHONE_NUMBER";
+    public static final String  DRIVER_PHONE_NUMBER = "DRIVER_PHONE_NUMBER";
     public static final String providerPrefrences = "ProviderApp";
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;

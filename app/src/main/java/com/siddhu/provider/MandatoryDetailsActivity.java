@@ -28,6 +28,7 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
     public static final String DRIVER_NAME = "DRIVER_NAME";
     public static final String  DRIVER_LOCALITY = "DRIVER_LOCALITY";
     public static final String  TRUCK_TYPE = "TRUCK_TYPE";
+    public static final String  DRIVER_PHONE_NUMBER = "DRIVER_PHONE_NUMBER";
 
     public static final String  PHONE_NUMBER = "PHONE_NUMBER";
     SharedPreferences sharedpreferences;
@@ -146,7 +147,7 @@ public class MandatoryDetailsActivity extends AppCompatActivity {
         mDriverProfileDatabase = FirebaseDatabase.getInstance().getReference().child("Drivers").child(userID).child("Profile");
         Map driverInfo = new HashMap();
 
-        String phoneNumber = sharedpreferences.getString("DRIVER_PHONE_NUMBER","");
+        phoneNumber = sharedpreferences.getString(DRIVER_PHONE_NUMBER,"");
         driverInfo.put(PHONE_NUMBER,phoneNumber);
         driverInfo.put(DRIVER_NAME,driverName);
         driverInfo.put(DRIVER_LOCALITY,driverLocality);

@@ -54,6 +54,7 @@ public class OrderActivity extends AppCompatActivity {
     DatabaseReference availableDriverDataBaseRef;
     GeoFire clientRequestGeoFire;
     GeoFire availableDriverRequestGeoFire;
+    GeoQueryEventListener availableDriverQueryEventListener;
 
     private DatePickerDialog datePicker;
     private TimePickerDialog timePicker;
@@ -196,7 +197,7 @@ public class OrderActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 FirebaseAuth.getInstance().signOut();
-                performLogout();
+                releaseResources();
                 startActivity(new Intent(OrderActivity.this,MainActivity.class));
                 finish();
             }
@@ -214,6 +215,12 @@ public class OrderActivity extends AppCompatActivity {
                             currentLocation = location;
                             showMsg("location updating");
                             fireClientRequest(currentLocation);
+                            if(resultDriverId!=null){
+                                stopLocationUpdates();
+                                String msg = "Driver Found " + resultDriverId + "sending request to the driver";
+                                showMsg(msg);
+                                noteEditText.setText(msg);
+                            }
                         }
                     }
                 }
@@ -235,21 +242,21 @@ public class OrderActivity extends AppCompatActivity {
         if (!clientRequestDatabaseFlag) {
             clientRequestDatabaseFlag = true;
             getAvailableDriver();
-//            clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
-//            clientRequestGeoFire = new GeoFire(clientDataBaseRef);
-//            clientRequestGeoFire.setLocation(currentUserId, new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), new GeoFire.CompletionListener() {
-//                @Override
-//                public void onComplete(String key, DatabaseError error) {
-//                    if (error != null) {
-////                    clientRequestDatabaseFlag = false;
-//                        String msg = "Setting client request flag off \n";
-//                        showMsg(msg);
-//                        showMsg(error.toString());
-//                    } else {
-//
-//                    }
-//                }
-//            });
+            clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
+            clientRequestGeoFire = new GeoFire(clientDataBaseRef);
+            clientRequestGeoFire.setLocation(currentUserId, new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), new GeoFire.CompletionListener() {
+                @Override
+                public void onComplete(String key, DatabaseError error) {
+                    if (error != null) {
+//                    clientRequestDatabaseFlag = false;
+                        String msg = "Setting client request flag off \n";
+                        showMsg(msg);
+                        showMsg(error.toString());
+                    } else {
+
+                    }
+                }
+            });
         }
         showMsg("Firebase service is running");
     }
@@ -261,13 +268,10 @@ public class OrderActivity extends AppCompatActivity {
 
         availableDriverGeoQuery = availableDriverRequestGeoFire.queryAtLocation(new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), RADIUS);
         Log.d("cc","on getAvailableDriver");
-        availableDriverGeoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+        availableDriverGeoQuery.addGeoQueryEventListener(availableDriverQueryEventListener = new GeoQueryEventListener() {
             @Override
             public void onKeyEntered(String key, GeoLocation location) {
-                Log.d(TAG, "onKeyEntered: ");
-                String msg = "miracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\nmiracle\n";
-                showMsg(msg);
-                noteEditText.setText(key);
+                resultDriverId = key;
             }
 
             @Override
@@ -293,11 +297,7 @@ public class OrderActivity extends AppCompatActivity {
         });
     }
 
-//        availableDriverGeoQuery.removeAllListeners();
 
-
-
-    //Function to get Truck request data
     private boolean getAllRequestInfo() {
         if (sourecEditText.getText() == null || sourecEditText.getText().toString().trim().length() == 0) {
             String msg = "Enter Source";
@@ -354,27 +354,37 @@ public class OrderActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
     }
 
-    private void performLogout(){
+    private void releaseResources(){
+        stopLocationUpdates();
+        removeDriverFromAvailableList();
+        deleteClientRequest();
+    }
+    private void stopLocationUpdates(){
         if (mFusedLocationClient != null) {
             String msg = "location service distroyed.";
             showMsg(msg);
             mFusedLocationClient.removeLocationUpdates(locationCallback);
         }
-        availableDriverGeoQuery.removeAllListeners();
+    }
+
+    private void removeDriverFromAvailableList(){
+        availableDriverGeoQuery.removeGeoQueryEventListener(availableDriverQueryEventListener);
+    }
+    private void deleteClientRequest(){
         clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
         clientRequestGeoFire = new GeoFire(clientDataBaseRef);
         clientRequestGeoFire.removeLocation(currentUserId, new GeoFire.CompletionListener() {
             @Override
             public void onComplete(String key, DatabaseError error) {
                 if(error != null)
-                showMsg(error.getMessage());
+                    showMsg(error.getMessage());
             }
         });
     }
 
     @Override
     protected void onDestroy() {
-        performLogout();
+        releaseResources();
         super.onDestroy();
     }
 }
