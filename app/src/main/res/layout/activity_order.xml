@@ -74,39 +74,38 @@
             android:id="@+id/truck1"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:checked="true"
             android:text="3 Wheeler Tempo" />
 
         <RadioButton
-            android:id="@+id/truck3"
+            android:id="@+id/truck2"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:text="Tata Ace / Chota Hathi"
             android:textSize="16sp" />
 
         <RadioButton
-            android:id="@+id/truck4"
+            android:id="@+id/truck3"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:text="Bolero Pickup 5 seater"
             android:textSize="16sp" />
 
         <RadioButton
-            android:id="@+id/truck5"
+            android:id="@+id/truck4"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:text="Bolero Pickup 3 seater"
             android:textSize="16sp" />
 
         <RadioButton
-            android:id="@+id/truck6"
+            android:id="@+id/truck5"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:text="Tata Tempo"
             android:textSize="16sp" />
 
         <RadioButton
-            android:id="@+id/truck7"
+            android:id="@+id/truck6"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:text="Truck"

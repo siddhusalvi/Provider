@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
@@ -13,13 +12,13 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -33,8 +32,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-
 import java.util.EventListener;
+import java.util.HashMap;
 import java.util.Map;
 
 public class WorkActivity extends AppCompatActivity {
@@ -56,7 +55,7 @@ public class WorkActivity extends AppCompatActivity {
 
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
-    Map map;
+    HashMap map;
     private boolean availableDriverFlag = false;
     private TextView noteTextView;
 
@@ -185,10 +184,10 @@ public class WorkActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if(snapshot.exists()){
-                    Map<String,Object> map = (Map <String,Object>) snapshot.getValue();
+                    map = (HashMap <String,Object>) snapshot.getValue();
                     String msg = "Order found";
                     showMsg(msg);
-                    displayOrder(map);
+                   displayNewOffer(map);
 
                 }
             }
@@ -233,6 +232,15 @@ public class WorkActivity extends AppCompatActivity {
     private void releaseResources() {
         stopLocationUpdates();
         removeAvailableDriver();
+    }
+
+    private void displayNewOffer(HashMap map){
+        Intent intent = new Intent(this, OfferActivity.class);
+        intent.putExtra("map", map);
+        releaseResources();
+
+        startActivity(intent);
+
     }
 
     private void stopLocationUpdates() {

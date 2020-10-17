@@ -19,6 +19,7 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -33,11 +34,14 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.Calendar;
+import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,20 +55,25 @@ public class OrderActivity extends AppCompatActivity {
     public static final String CLIENT_DATE = "CLIENT_DATE";
     public static final String CLIENT_TIME = "CLIENT_TIME";
     public static final String CLIENT_NOTE = "CLIENT_NOTE";
+    public static final String CLIENT_FIREBASE_ID = "CLIENT_FIREBASE_ID";
 
     public static final String providerPrefrences = "ProviderApp";
     public static final String AVAILABLE_DRIVERS = "DriversAvailable";
     public static final Double RADIUS = 10d;
     private static final String TAG = "OrderActivity";
 
-    SharedPreferences sharedpreferences;
-    SharedPreferences.Editor editor;
-    DatabaseReference clientDataBaseRef;
-    DatabaseReference availableDriverDataBaseRef;
-    DatabaseReference driverRequestDatabase;
-    GeoFire clientRequestGeoFire;
-    GeoFire availableDriverRequestGeoFire;
-    GeoQueryEventListener availableDriverQueryEventListener;
+    private SharedPreferences sharedpreferences;
+    private SharedPreferences.Editor editor;
+    private DatabaseReference clientDataBaseRef;
+    private DatabaseReference availableDriverDataBaseRef;
+    private DatabaseReference driverProfileDataBaseRef;
+    private DatabaseReference driverRequestDatabase;
+    private DatabaseReference offerResponseDatabaseRefference;
+    private GeoFire clientRequestGeoFire;
+    private GeoFire availableDriverRequestGeoFire;
+    private GeoQueryEventListener availableDriverQueryEventListener;
+    private ValueEventListener offerResponseDatabaseRefferenceEventListener;
+    private ValueEventListener driverProfileDatabaseRefferenceEventListener;
     private DatePickerDialog datePicker;
     private TimePickerDialog timePicker;
     private TextView dateTextView;
@@ -220,7 +229,7 @@ public class OrderActivity extends AppCompatActivity {
                     for (Location location : locationResult.getLocations()) {
                         if (location != null) {
                             currentLocation = location;
-                            showMsg("location updating");
+//                            showMsg("location updating");
                             fireClientRequest(currentLocation);
                             if (resultDriverId != null) {
                                 stopLocationUpdates();
@@ -250,23 +259,23 @@ public class OrderActivity extends AppCompatActivity {
         if (!clientRequestDatabaseFlag) {
             clientRequestDatabaseFlag = true;
             getAvailableDriver();
-            clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
-            clientRequestGeoFire = new GeoFire(clientDataBaseRef);
-            clientRequestGeoFire.setLocation(currentUserId, new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), new GeoFire.CompletionListener() {
-                @Override
-                public void onComplete(String key, DatabaseError error) {
-                    if (error != null) {
-//                    clientRequestDatabaseFlag = false;
-                        String msg = "Setting client request flag off \n";
-                        showMsg(msg);
-                        showMsg(error.toString());
-                    } else {
-
-                    }
-                }
-            });
+//            clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
+//            clientRequestGeoFire = new GeoFire(clientDataBaseRef);
+//            clientRequestGeoFire.setLocation(currentUserId, new GeoLocation(currentLocation.getLatitude(), currentLocation.getLongitude()), new GeoFire.CompletionListener() {
+//                @Override
+//                public void onComplete(String key, DatabaseError error) {
+//                    if (error != null) {
+////                    clientRequestDatabaseFlag = false;
+//                        String msg = "Setting client request flag off \n";
+//                        showMsg(msg);
+//                        showMsg(error.toString());
+//                    } else {
+//
+//                    }
+//                }
+//            });
         }
-        showMsg("Firebase service is running");
+//        showMsg("Firebase service is running");
     }
 
     private void getAvailableDriver() {
@@ -309,15 +318,45 @@ public class OrderActivity extends AppCompatActivity {
         driverRequestDatabase = FirebaseDatabase.getInstance().getReference().child("Drivers").child(driverId).child("Request");
         if(buildRequest()){
             driverRequestDatabase.setValue(requestMap);
+
             String msg = "request sent to the driver";
             showMsg(msg);
+            getDriverResponse(driverId,currentUserId);
         }else {
             String msg = "Problem in building request";
             showMsg(msg);
         }
-
     }
 
+    private void getDriverResponse(final String driverId, String myFirebaseId){
+        String msg = "wating for driver response";
+        showMsg(msg);
+        offerResponseDatabaseRefference = FirebaseDatabase.getInstance().getReference().child("Drivers").child(driverId).child(myFirebaseId).child("Response");
+        offerResponseDatabaseRefference.addValueEventListener(offerResponseDatabaseRefferenceEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists()){
+                    boolean driverResponse = (Boolean) snapshot.getValue();
+                    if(driverResponse){
+                        String msg = "Getting Driver id";
+                        showMsg(msg);
+                        getDriverProfile(driverId);
+                    }else{
+
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                showMsg(error.getMessage());
+            }
+        });
+    }
+
+    private void getDriverProfile(String driverId){
+
+    }
     private boolean buildRequest() {
         requestMap = new HashMap();
         requestMap.put(CLIENT_NAME, name);
@@ -328,6 +367,8 @@ public class OrderActivity extends AppCompatActivity {
         requestMap.put(CLIENT_DATE, date);
         requestMap.put(CLIENT_TIME, time);
         requestMap.put(CLIENT_NOTE, note);
+        requestMap.put(CLIENT_FIREBASE_ID, currentUserId);
+
         return true;
     }
 
@@ -382,11 +423,11 @@ public class OrderActivity extends AppCompatActivity {
         trucksId.put("Truck", new Integer(6));
     }
 
-
     private void releaseResources() {
         stopLocationUpdates();
         removeDriverFromAvailableList();
         deleteClientRequest();
+        removeDriverResoponseListener();
     }
 
     private void stopLocationUpdates() {
@@ -399,6 +440,12 @@ public class OrderActivity extends AppCompatActivity {
 
     private void removeDriverFromAvailableList() {
         availableDriverGeoQuery.removeGeoQueryEventListener(availableDriverQueryEventListener);
+    }
+
+    private void removeDriverResoponseListener(){
+        if(offerResponseDatabaseRefference != null){
+            offerResponseDatabaseRefference.removeEventListener(offerResponseDatabaseRefferenceEventListener);
+        }
     }
 
     private void deleteClientRequest() {
