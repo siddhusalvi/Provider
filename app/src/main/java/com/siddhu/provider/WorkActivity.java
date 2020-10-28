@@ -12,10 +12,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,7 +30,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import java.util.EventListener;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,7 +53,7 @@ public class WorkActivity extends AppCompatActivity {
 
     SharedPreferences sharedpreferences;
     SharedPreferences.Editor editor;
-    HashMap map;
+    HashMap requestMap;
     private boolean availableDriverFlag = false;
     private TextView noteTextView;
 
@@ -79,6 +77,10 @@ public class WorkActivity extends AppCompatActivity {
     private Button mLogout;
     private Button mbutton,mbutton2,button3,starService,endService;
     private Location mLastLocation;
+
+    Button DriverButton;
+
+
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -148,7 +150,20 @@ public class WorkActivity extends AppCompatActivity {
                 }
             }
         };
+
+        DriverButton = findViewById(R.id.tempButton);
+        DriverButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(WorkActivity.this,DriverDetailsActivity.class);
+                startActivity(intent);
+
+            }
+        });
+
     }
+
+
 
     public void startLocationUpdates() {
         mFusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
@@ -184,10 +199,10 @@ public class WorkActivity extends AppCompatActivity {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if(snapshot.exists()){
-                    map = (HashMap <String,Object>) snapshot.getValue();
+                    requestMap = (HashMap <String,Object>) snapshot.getValue();
                     String msg = "Order found";
                     showMsg(msg);
-                   displayNewOffer(map);
+                   displayNewOffer(requestMap);
 
                 }
             }
@@ -212,6 +227,7 @@ public class WorkActivity extends AppCompatActivity {
 
         noteTextView.setText(order);
     }
+
     private String getvalue(Map map,String key){
         if(map.containsKey(key)){
             return map.get(key).toString();
@@ -328,7 +344,6 @@ public class WorkActivity extends AppCompatActivity {
             }
         }
     }
-
 
     private void showMsg(String msg){
         //Snackbar.make(findViewById(android.R.id.content).getRootView(),msg, BaseTransientBottomBar.LENGTH_SHORT).show();

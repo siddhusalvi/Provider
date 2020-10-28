@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.Location;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -33,6 +34,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -58,17 +60,20 @@ public class OrderActivity extends AppCompatActivity {
     public static final String CLIENT_FIREBASE_ID = "CLIENT_FIREBASE_ID";
 
     public static final String providerPrefrences = "ProviderApp";
+    public static final String DRIVER_PROFILE_INFO = "DRIVER_PROFILE_INFO";
     public static final String AVAILABLE_DRIVERS = "DriversAvailable";
     public static final Double RADIUS = 10d;
     private static final String TAG = "OrderActivity";
+
+    private HashMap driverProfile;
 
     private SharedPreferences sharedpreferences;
     private SharedPreferences.Editor editor;
     private DatabaseReference clientDataBaseRef;
     private DatabaseReference availableDriverDataBaseRef;
-    private DatabaseReference driverProfileDataBaseRef;
     private DatabaseReference driverRequestDatabase;
     private DatabaseReference offerResponseDatabaseRefference;
+    private DatabaseReference driverProfileDatabaseRefference;
     private GeoFire clientRequestGeoFire;
     private GeoFire availableDriverRequestGeoFire;
     private GeoQueryEventListener availableDriverQueryEventListener;
@@ -105,7 +110,6 @@ public class OrderActivity extends AppCompatActivity {
 
     private Map trucksId;
     private Map requestMap;
-
     private FusedLocationProviderClient mFusedLocationClient;
     private LocationRequest locationRequest;
     private LocationCallback locationCallback;
@@ -337,6 +341,7 @@ public class OrderActivity extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if(snapshot.exists()){
                     boolean driverResponse = (Boolean) snapshot.getValue();
+
                     if(driverResponse){
                         String msg = "Getting Driver id";
                         showMsg(msg);
@@ -354,9 +359,52 @@ public class OrderActivity extends AppCompatActivity {
         });
     }
 
-    private void getDriverProfile(String driverId){
+    private void getDriverProfile(final String driverId){
+        String msg = "Getting Driver Profile";
+        showMsg(msg);
+        driverProfileDatabaseRefference = FirebaseDatabase.getInstance().getReference().child("Drivers").child(driverId).child("Profile");
+        driverRequestDatabase.addValueEventListener(driverProfileDatabaseRefferenceEventListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if(snapshot.exists()){
+                    driverProfile = (HashMap <String,Object>) snapshot.getValue();
+                    String msg = "displaying driver details";
+                    showMsg(msg);
+                   showDriverDetails(driverProfile);
+                }
+            }
 
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                showMsg(error.getMessage());
+            }
+        });
     }
+
+    private void clearDriverDatabase(){
+        removeRequestFromDriver();
+        removeResponseFromDriver();
+    }
+
+    private void removeRequestFromDriver(){
+        if(driverRequestDatabase!=null){
+        driverRequestDatabase.removeValue();}
+    }
+    private void removeResponseFromDriver(){
+        removeDriverResoponseListener();
+        if(offerResponseDatabaseRefference!= null){
+            offerResponseDatabaseRefference.removeValue();
+        }
+    }
+
+    private void showDriverDetails(HashMap driverProfile){
+        Intent intent = new Intent(this, DriverDetailsActivity.class);
+        intent.putExtra(DRIVER_PROFILE_INFO, driverProfile);
+        releaseResources();
+        startActivity(intent);
+        clearDriverDatabase();
+    }
+
     private boolean buildRequest() {
         requestMap = new HashMap();
         requestMap.put(CLIENT_NAME, name);
@@ -428,6 +476,7 @@ public class OrderActivity extends AppCompatActivity {
         removeDriverFromAvailableList();
         deleteClientRequest();
         removeDriverResoponseListener();
+        removeDriverProfileListener();
     }
 
     private void stopLocationUpdates() {
@@ -447,6 +496,13 @@ public class OrderActivity extends AppCompatActivity {
             offerResponseDatabaseRefference.removeEventListener(offerResponseDatabaseRefferenceEventListener);
         }
     }
+
+    private void removeDriverProfileListener() {
+        if(driverProfileDatabaseRefference != null){
+            driverProfileDatabaseRefference.removeEventListener(driverProfileDatabaseRefferenceEventListener);
+        }
+    }
+
 
     private void deleteClientRequest() {
         clientDataBaseRef = FirebaseDatabase.getInstance().getReference().child("ClientRequest");
